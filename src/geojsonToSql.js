@@ -1,9 +1,21 @@
-var fs = require('fs');
+var fs = require('graceful-fs');
 var path = require('path');
 var buildPathFile = null;
+var dateNow = null;
+var shp = require('./shp');
+
+function con() {
+    console.log('2222222222')
+    debugger;
+    shp("./pandr.zip").then(function(geojson) {
+        debugger;
+        console.log(geojson)
+    })
+}
 
 function createNewFileName() {
-    return [path.join(__dirname, '../dist/geojson_'), new Date().getHours() + '_' + new Date().getMinutes() + '_' + new Date().getSeconds(), '.sql'].join('');
+    dateNow = new Date().getHours() + '_' + new Date().getMinutes() + '_' + new Date().getSeconds();
+    return [path.join(__dirname, './dist/geojson_'), dateNow, '.sql'].join('');
 }
 
 function convertGeojsonToSql(geojson) {
@@ -12,8 +24,24 @@ function convertGeojsonToSql(geojson) {
     var features = geojson['features'];
     for (let i = 0, len = features.length; i < len; i++) {
         var feature = features[i];
-        var coordinates = feature['geometry']['coordinates'];
-        fs.writeFile(buildPathFile, coordinates + '\r\n', {
+        var sql = "insert into double_geo (xh,coordinates,STCROSSID,EDCROSSID,RSID,CROSSID,ID,ROADID) values ('xh'," +
+            "'" +
+            arrToString(feature.geometry.coordinates) +
+            "'," +
+            feature.properties.STCROSSID +
+            "," +
+            feature.properties.EDCROSSID +
+            "," +
+            feature.properties.RSID +
+            "," +
+            feature.properties.CROSSID +
+            "," +
+            feature.properties.ID +
+            "," +
+            feature.properties.ROADID +
+            ");";
+
+        fs.writeFile(buildPathFile, sql + '\r\n', {
             flag: 'a'
         }, function(err) {
             if (err) {
@@ -26,6 +54,21 @@ function convertGeojsonToSql(geojson) {
     }
     console.log('All successed,convert end!');
     console.log('sql was saved at dist folder');
+    console.log(buildPathFile);
+    return dateNow;
 }
 
+function arrToString(arr) {
+    var geo = "";
+    for (var m = 0, n = arr.length; m < n; m++) {
+        if (m == 0) {
+            geo = '[[' + arr[m][0] + ',' + arr[m][1] + '],'
+        } else if (m == n - 1) {
+            geo += '[' + arr[m][0] + ',' + arr[m][1] + ']]'
+        } else {
+            geo += '[' + arr[m][0] + ',' + arr[m][1] + '],'
+        }
+    }
+    return geo;
+}
 module.exports = convertGeojsonToSql;

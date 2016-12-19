@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "formidable": "^1.0.17",
+    "graceful-fs": "^4.1.11"
+  }
+}

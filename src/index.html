@@ -3,30 +3,97 @@
 
 <head>
     <meta charset="UTF-8">
-    <title>Document</title>
+    <title>shapeFileToGeojson</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.2/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.0.2/dist/leaflet.js"></script>
+    <style>
+        #map {
+            width: 1200px;
+            height: 800px;
+        }
+    </style>
 </head>
 
 <body>
-    <input type="button" value='转换' onclick="convert()">
+    <input type="file" id="shape" />
+    <input type="button" id="upload" value="上传" onclick="upload()" />
+    <input type="button" id='convert' value='转换' onclick="convert()">
+    <input type="button" id='download' value='下载' onclick="download()">
+    <div id='map'></div>
+    <p>1、点击选择文件，选择shape文件的压缩包，要求压缩文件格式为zip</p>
+    <p>2、点击上传按钮、等待提示上传成功</p>
+    <p>3、点击转换按钮、等待提示转换成功</p>
+    <p>3、点击下载按钮、下载转换之后的sql</p>
+    <script>
+        var map = L.map('map').setView([31, 119], 5);
+
+        L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpandmbXliNDBjZWd2M2x6bDk3c2ZtOTkifQ._QA7i5Mpkd_m30IGElHziw', {
+            maxZoom: 18,
+            attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, ' +
+                '<a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+                'Imagery © <a href="http://mapbox.com">Mapbox</a>',
+            id: 'mapbox.light'
+        }).addTo(map);
+
+        //var geojson = L.geoJson(statesData).addTo(map);
+    </script>
+    <script src='http://cdn.bootcss.com/jquery/3.1.1/jquery.min.js'></script>
     <script src="./shp.js"></script>
     <script>
-        var geo = new URLSearchParams();
-        shp("./pandr.zip").then(function(geojson) {
-            geo.append('geo', JSON.stringify(geojson))
-        });
+        var shapeFile = null;
+        var shapeFileNameOnServer = null;
+        var sqlFileName = null;
+
+        function upload() {
+            shapeFile = document.getElementById('shape').files[0];
+            if (shapeFile) {
+                var data = new FormData();
+                data.append('upload', shapeFile);
+                $.ajax({
+                    url: 'http://10.25.67.114:8080/upload',
+                    type: 'POST',
+                    data: data,
+                    cache: false,
+                    contentType: false, //不可缺参数
+                    processData: false, //不可缺参数
+                    success: function(data) {
+                        alert('文件上传成功！');
+                        shapeFileNameOnServer = data;
+                        console.log(shapeFileNameOnServer)
+                    },
+                    error: function() {
+                        console.log('error');
+                    }
+                });
+            } else {
+                alert('请先添加文件')
+            }
+        }
 
         function convert() {
-            fetch('http://127.0.0.1:8080/geo', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded;charset=utf-8'
-                },
-                body: geo
-            }).then(function(res) {
-                return res.json();
-            }).then(function(json) {
-                console.log(json);
-            })
+            shp('../files' + shapeFileNameOnServer).then(function(geojson) {
+                $.ajax({
+                    type: 'POST',
+                    url: 'http://10.25.67.114:8080/geo',
+                    data: {
+                        geo: JSON.stringify(geojson)
+                    },
+                    contentType: 'application/x-www-form-urlencoded;charset=utf-8',
+                    success: function(data) {
+                        alert('文件转换成功！');
+                        sqlFileName = data;
+                    }
+                })
+                console.log(geojson);
+                delete geojson.fileName;
+                var layer = L.geoJson(geojson).addTo(map);
+                map.flyToBounds(layer.getBounds())
+            });
+        }
+
+        function download() {
+            var downloadUrl = "http://10.25.67.114:8080/dist/geojson_" + sqlFileName + '.sql';
+            window.location = downloadUrl;
         }
     </script>
 </body>
