@@ -4,14 +4,7 @@ var buildPathFile = null;
 var dateNow = null;
 var shp = require('./shp');
 
-function con() {
-    console.log('2222222222')
-    debugger;
-    shp("./pandr.zip").then(function(geojson) {
-        debugger;
-        console.log(geojson)
-    })
-}
+
 
 function createNewFileName() {
     dateNow = new Date().getHours() + '_' + new Date().getMinutes() + '_' + new Date().getSeconds();
